@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -45,6 +46,7 @@ func (s *APIServer) Run() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/account/{id}", makeHTTPHandleFunc(s.handleAccount))
+	router.HandleFunc("/account", makeHTTPHandleFunc(s.handleAccount))
 
 	log.Println("JONS API server running on port: ", s.listenAddr)
 	http.ListenAndServe(s.listenAddr, router)
@@ -63,16 +65,6 @@ func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error 
 	}
 }
 
-func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
-	id := mux.Vars(r)["id"]
-
-	fmt.Println("id: ", id)
-
-	account := &Account{}
-
-	return WriteJSON(w, http.StatusOK, account)
-}
-
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
 	createAccountReq := &CreateAccountRequest{}
 	if err := json.NewDecoder(r.Body).Decode(createAccountReq); err != nil {
@@ -88,10 +80,30 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 	return WriteJSON(w, http.StatusOK, account)
 }
 
-func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
-	return nil
+func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
+	idstr := mux.Vars(r)["id"]
+
+	log.Println("id: ", idstr)
+
+	id, err := strconv.Atoi(idstr)
+
+	if err != nil {
+		return WriteJSON(w, http.StatusBadRequest, nil)
+	}
+
+	acc, err := s.store.GetAccountByID(id)
+
+	if err != nil {
+		return WriteJSON(w, http.StatusInternalServerError, nil)
+	}
+
+	return WriteJSON(w, http.StatusOK, *acc)
 }
 
 func (s *APIServer) handleTransfer(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
